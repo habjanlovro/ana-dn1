@@ -1,20 +1,30 @@
 import System.IO
 import Debug.Trace
+import Data.Graph
+import Data.Array
 
-
-inD :: Int -> Int -> [[(Int, Int)]]
-inD n k =
-  [[(i, x) | x <- [1..k]] | i <- [1..n]]
+everyVertexInD n k =
+  [[(i, j) | i <- [1..n]] | j <- [1..k]]
 
 
 notTwoTimes :: Int -> Int -> [[(Int, Int)]]
 notTwoTimes n k =
-  [[(-i, -x), (-i, -y)] | i <- [1..n], x <- [1..k-1], y <- [x+1..k]]
+  let sameVertexTwice = 
+        [[(-i, -x), (-i, -y)] | i <- [1..n], x <- [1..k-1], y <- [x+1..k]]
+      sameIndexTwice =
+        [[(-x, -i), (-y, -i)] | i <- [1..k], x <- [1..n-1], y <- [x+1..n]]
+  in
+    sameVertexTwice ++ sameIndexTwice
 
 
-validConnection :: Int -> Int -> Int -> [[(Int, Int)]]
-validConnection k v u =
-  [[(v, i), (u, j)] | i <- [1..k], j <- [1..k], i /= j]
+getEdgesClauseForVertex :: Int -> [Int] -> Int -> [(Int, Int)]
+getEdgesClauseForVertex index neighbors k =
+  concat $ map (\x -> [(x, j) | j <- [1..k]]) (index : neighbors)
+  
+
+getEdges :: Graph -> Int -> [[(Int, Int)]]
+getEdges g k =
+  map (\(i, neighbors) -> getEdgesClauseForVertex i neighbors k) (assocs g)
 
 
 calculateIndex :: Int -> (Int, Int) -> Int
@@ -24,7 +34,7 @@ calculateIndex k (i, j) =
       absJ = abs j
       index = k * (absI - 1) + absJ
   in
-    if isNegative then - index else index 
+    if isNegative then - index else index
 
 
 parseFirstLine :: String -> (Int, Int)
@@ -35,24 +45,28 @@ parseFirstLine s =
   in
     (vertices, edges)
 
-readTillEnd :: Int -> [String] -> IO ([String])
-readTillEnd iters input = do
-  if iters == 0
-    then return input
-    else do
-      l <- getLine
-      readTillEnd (iters - 1) (l : input)
+readTillEnd :: Int -> IO ([String])
+readTillEnd iters =
+  let call i acc = do
+        if i == 0
+          then return acc
+          else do
+          l <- getLine
+          call (i - 1) (l : acc)
+  in
+    call iters []
 
-getEdgeClauses :: Int -> [String] -> [[(Int, Int)]]
-getEdgeClauses k input =
+parseEdges :: [String] -> [(Int, Int)]
+parseEdges input =
   let edgeClause [] acc = acc
       edgeClause (l : ls) acc =
         let w = words l
             v = read (w !! 1) :: Int
             u = read (w !! 2) :: Int
-            clauses = validConnection k v u
+            e1 = (v, u)
+            e2 = (u, v)
         in
-          edgeClause ls (acc ++ clauses)
+          edgeClause ls (e1 : e2 : acc)
   in
     edgeClause input []
 
@@ -68,7 +82,7 @@ formatCall k (c : cs) acc =
     formatCall k cs (acc ++ formatted)
 
 format :: [[(Int, Int)]] -> Int -> Int -> String
-format clauses k n =
+format clauses n k =
   let formattedClauses = formatCall k clauses ""
       numClauses = length clauses
       numVariables = n * k
@@ -78,13 +92,12 @@ format clauses k n =
 
 main :: IO ()
 main = do
---  putStrLn "Enter k: "
-  k <- readLn :: IO Int
---  putStrLn "Vpiši graf:"
   fstLine <- getLine
   let (n, numEdges) = parseFirstLine fstLine
-  edgesData <- readTillEnd numEdges []
-  let edgeClauses = getEdgeClauses k edgesData
-  let clauses = (inD n k) ++ (notTwoTimes n k) ++ edgeClauses
-  let formatted = format clauses k n
+  edgesData <- readTillEnd numEdges
+  k <- readLn :: IO Int
+  let edges = parseEdges edgesData
+  let graph = buildG (1, n) edges
+  let clauses = everyVertexInD n k ++ getEdges graph k ++ notTwoTimes n k
+  let formatted = format clauses n k
   putStrLn formatted
