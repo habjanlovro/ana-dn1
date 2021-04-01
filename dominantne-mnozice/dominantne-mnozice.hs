@@ -74,12 +74,12 @@ formatCall :: Int -> [[(Int, Int)]] -> String -> String
 formatCall k [] acc = acc
 formatCall k (c : cs) acc =
   let formatted = foldr
-                  (\x a -> a ++ " " ++ show (calculateIndex k x))
+                  (\x a -> show (calculateIndex k x) ++ " " ++ a)
                   (show (calculateIndex k (head c)))
                   (tail c)
         ++ " 0\n"
   in
-    formatCall k cs (acc ++ formatted)
+    formatCall k cs (formatted ++ acc)
 
 format :: [[(Int, Int)]] -> Int -> Int -> String
 format clauses n k =
