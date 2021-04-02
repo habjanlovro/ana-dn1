@@ -98,6 +98,6 @@ main = do
   k <- readLn :: IO Int
   let edges = parseEdges edgesData
   let graph = buildG (1, n) edges
-  let clauses = everyVertexInD n k ++ getEdges graph k ++ notTwoTimes n k
-  let formatted = format clauses n k
-  putStrLn formatted
+  putStr $ format (everyVertexInD n k) n k
+  putStr $ format (getEdges graph k) n k
+  putStr $ format (notTwoTimes n k) n k
